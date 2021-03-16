@@ -1,20 +1,83 @@
-import React from 'react';
-import logo from './BSLogo.png';
-import './App.css';
-import { withAuthenticator } from 'aws-amplify-react';
+/* src/App.js */
+import React, { useEffect, useState } from 'react'
+import { withAuthenticator } from '@aws-amplify/ui-react'
+import Amplify, { API, graphqlOperation } from 'aws-amplify'
+import { createTodo } from './graphql/mutations'
+import { listTodos } from './graphql/queries'
 import '@aws-amplify/ui/dist/style.css';
+import awsExports from "./aws-exports";
+Amplify.configure(awsExports);
 
-function App() {
+const initialState = { name: '', description: '' }
+
+const App = () => {
+  const [formState, setFormState] = useState(initialState)
+  const [todos, setTodos] = useState([])
+
+  useEffect(() => {
+    fetchTodos()
+  }, [])
+
+  function setInput(key, value) {
+    setFormState({ ...formState, [key]: value })
+  }
+
+  async function fetchTodos() {
+    try {
+      const todoData = await API.graphql(graphqlOperation(listTodos))
+      const todos = todoData.data.listTodos.items
+      setTodos(todos)
+    } catch (err) { console.log('error fetching therapists') }
+  }
+
+  async function addTodo() {
+    try {
+      if (!formState.name || !formState.description) return
+      const todo = { ...formState }
+      setTodos([...todos, todo])
+      setFormState(initialState)
+      await API.graphql(graphqlOperation(createTodo, {input: todo}))
+    } catch (err) {
+      console.log('error creating therapist:', err)
+    }
+  }
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          <code>beautysafety.net</code>
-        </p>
-      </header>
+    <div style={styles.container}>
+      <h1>beautysafety.net</h1>
+      <h3>Therapist Detail</h3>
+      <input
+        onChange={event => setInput('name', event.target.value)}
+        style={styles.input}
+        value={formState.name}
+        placeholder="Name"
+      />
+      <input
+        onChange={event => setInput('description', event.target.value)}
+        style={styles.input}
+        value={formState.description}
+        placeholder="Treatment"
+      />
+      <button style={styles.button} onClick={addTodo}>Create Therapist</button>
+      {
+        todos.map((todo, index) => (
+          <div key={todo.id ? todo.id : index} style={styles.todo}>
+            <p style={styles.todoName}>{todo.name}</p>
+            <p style={styles.todoDescription}>{todo.description}</p>
+          </div>
+        ))
+      }
     </div>
-  );
+  )
 }
 
-export default withAuthenticator(App, {includeGreetings: true});
+const styles = {
+  container: { width: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: 20 },
+  todo: {  marginBottom: 15 },
+  input: { border: 'none', backgroundColor: '#ddd', marginBottom: 10, padding: 8, fontSize: 18 },
+  todoName: { fontSize: 20, fontWeight: 'bold' },
+  todoDescription: { marginBottom: 0 },
+  button: { backgroundColor: 'blue', color: 'white', outline: 'none', fontSize: 18, padding: '12px 0px' }
+}
+
+export default withAuthenticator(App);
