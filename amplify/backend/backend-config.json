@@ -1,1 +1,10 @@
-{}
+{
+  "auth": {
+    "reactamplifiedaf4831f0": {
+      "service": "Cognito",
+      "providerPlugin": "awscloudformation",
+      "dependsOn": [],
+      "customAuth": false
+    }
+  }
+}
